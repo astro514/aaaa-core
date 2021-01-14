@@ -1,0 +1,12 @@
+{
+  "networks": {
+    "ropsten": {
+      "privateKey": "d09d05d5a236ecfe7733c75db29a375018cd029d8f87963fa58624a26b12f918",
+      "infuraKey": "8baf9b19ef5f4aa8b3c1f355794baeb1"
+    },
+    "mainnet": {
+      "privateKey": "d09d05d5a236ecfe7733c75db29a375018cd029d8f87963fa58624a26b12f918",
+      "infuraKey": "8baf9b19ef5f4aa8b3c1f355794baeb1"
+    }
+  }
+}
