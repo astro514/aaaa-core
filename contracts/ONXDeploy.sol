@@ -40,19 +40,19 @@ interface IConfig {
 	function setValue(bytes32 _key, uint256 _value) external;
 }
 
-interface IAAAAMint {
+interface IONXMint {
 	function sync() external;
 }
 
-interface IAAAAShare {
+interface IONXShare {
 	function setShareToken(address _shareToken) external;
 }
 
-interface IAAAAToken {
+interface IONXToken {
 	function initialize() external;
 }
 
-interface IAAAAFactory {
+interface IONXFactory {
 	function countPools() external view returns (uint256);
 
 	function allPools(uint256 index) external view returns (address);
@@ -64,7 +64,7 @@ interface IAAAAFactory {
 	function createPool(address _lendToken, address _collateralToken) external returns (address pool);
 }
 
-interface IAAAAPlatform {
+interface IONXPlatform {
 	function updatePoolParameter(
 		address _lendToken,
 		address _collateralToken,
@@ -73,7 +73,7 @@ interface IAAAAPlatform {
 	) external;
 }
 
-contract AAAADeploy {
+contract ONXDeploy {
 	address public owner;
 	address public config;
 	modifier onlyOwner() {
@@ -95,16 +95,16 @@ contract AAAADeploy {
 	}
 
 	function createPool(address _lendToken, address _collateralToken) public onlyOwner {
-		IAAAAFactory(IConfig(config).factory()).createPool(_lendToken, _collateralToken);
+		IONXFactory(IConfig(config).factory()).createPool(_lendToken, _collateralToken);
 	}
 
 	function changeMintPerBlock(uint256 _value) external onlyOwner {
 		IConfig(config).setValue(ConfigNames.MINT_AMOUNT_PER_BLOCK, _value);
-		IAAAAMint(IConfig(config).mint()).sync();
+		IONXMint(IConfig(config).mint()).sync();
 	}
 
 	function setShareToken(address _shareToken) external onlyOwner {
-		IAAAAShare(IConfig(config).share()).setShareToken(_shareToken);
+		IONXShare(IConfig(config).share()).setShareToken(_shareToken);
 	}
 
 	function updatePoolParameter(
@@ -113,6 +113,6 @@ contract AAAADeploy {
 		bytes32 _key,
 		uint256 _value
 	) external onlyOwner {
-		IAAAAPlatform(IConfig(config).platform()).updatePoolParameter(_lendToken, _collateralToken, _key, _value);
+		IONXPlatform(IConfig(config).platform()).updatePoolParameter(_lendToken, _collateralToken, _key, _value);
 	}
 }

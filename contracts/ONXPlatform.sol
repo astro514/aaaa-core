@@ -5,7 +5,7 @@ import "./modules/ConfigNames.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/TransferHelper.sol";
 
-interface IAAAAMint {
+interface IONXMint {
 	function increaseProductivity(address user, uint256 value) external returns (bool);
 
 	function decreaseProductivity(address user, uint256 value) external returns (bool);
@@ -19,7 +19,7 @@ interface IWETH {
 	function withdraw(uint256) external;
 }
 
-interface IAAAAPool {
+interface IONXPool {
 	function deposit(uint256 _amountDeposit, address _from) external;
 
 	function withdraw(uint256 _amountWithdraw, address _from) external returns (uint256, uint256);
@@ -82,12 +82,18 @@ interface IAAAAPool {
 	function totalLiquidation() external view returns (uint256);
 }
 
-contract AAAAPlatform is Configable {
+interface IStkrETH {
+	function ratio() external view returns (uint256);
+}
+
+contract ONXPlatform is Configable {
 	using SafeMath for uint256;
 	uint256 private unlocked = 1;
 	address public lendToken;
 	address public collateralToken;
 	address public pool;
+	address public stkrEth;
+
 	modifier lock() {
 		require(unlocked == 1, "Locked");
 		unlocked = 0;
@@ -105,17 +111,19 @@ contract AAAAPlatform is Configable {
 	function initialize(
 		address _pool,
 		address _lendToken,
-		address _collateralToken
+		address _collateralToken,
+		address _strkEth
 	) external onlyOwner {
 		pool = _pool;
 		lendToken = _lendToken;
 		collateralToken = _collateralToken;
+		stkrEth = _strkEth;
 	}
 
 	function deposit(uint256 _amountDeposit) external lock poolExist {
 		require(IConfig(config).getValue(ConfigNames.DEPOSIT_ENABLE) == 1, "NOT ENABLE NOW");
 		TransferHelper.safeTransferFrom(lendToken, msg.sender, pool, _amountDeposit);
-		IAAAAPool(pool).deposit(_amountDeposit, msg.sender);
+		IONXPool(pool).deposit(_amountDeposit, msg.sender);
 		_updateProdutivity();
 	}
 
@@ -124,14 +132,14 @@ contract AAAAPlatform is Configable {
 		require(IConfig(config).getValue(ConfigNames.DEPOSIT_ENABLE) == 1, "NOT ENABLE NOW");
 		IWETH(IConfig(config).WETH()).deposit{value: msg.value}();
 		TransferHelper.safeTransfer(lendToken, pool, msg.value);
-		IAAAAPool(pool).deposit(msg.value, msg.sender);
+		IONXPool(pool).deposit(msg.value, msg.sender);
 		_updateProdutivity();
 	}
 
 	function withdraw(uint256 _amountWithdraw) external lock poolExist {
 		require(IConfig(config).getValue(ConfigNames.WITHDRAW_ENABLE) == 1, "NOT ENABLE NOW");
 		(uint256 withdrawSupplyAmount, uint256 withdrawLiquidationAmount) =
-			IAAAAPool(pool).withdraw(_amountWithdraw, msg.sender);
+			IONXPool(pool).withdraw(_amountWithdraw, msg.sender);
 		if (withdrawSupplyAmount > 0) _innerTransfer(lendToken, msg.sender, withdrawSupplyAmount);
 		if (withdrawLiquidationAmount > 0) _innerTransfer(collateralToken, msg.sender, withdrawLiquidationAmount);
 		_updateProdutivity();
@@ -143,9 +151,9 @@ contract AAAAPlatform is Configable {
 			TransferHelper.safeTransferFrom(collateralToken, msg.sender, pool, _amountCollateral);
 		}
 
-		(, uint256 borrowAmountCollateral, , , ) = IAAAAPool(pool).borrows(msg.sender);
+		(, uint256 borrowAmountCollateral, , , ) = IONXPool(pool).borrows(msg.sender);
 		uint256 repayAmount = getRepayAmount(borrowAmountCollateral, msg.sender);
-		IAAAAPool(pool).borrow(_amountCollateral, repayAmount, _expectBorrow, msg.sender);
+		IONXPool(pool).borrow(_amountCollateral, repayAmount, _expectBorrow, msg.sender);
 		if (_expectBorrow > 0) _innerTransfer(lendToken, msg.sender, _expectBorrow);
 		_updateProdutivity();
 	}
@@ -158,9 +166,9 @@ contract AAAAPlatform is Configable {
 			TransferHelper.safeTransfer(collateralToken, pool, msg.value);
 		}
 
-		(, uint256 borrowAmountCollateral, , , ) = IAAAAPool(pool).borrows(msg.sender);
+		(, uint256 borrowAmountCollateral, , , ) = IONXPool(pool).borrows(msg.sender);
 		uint256 repayAmount = getRepayAmount(borrowAmountCollateral, msg.sender);
-		IAAAAPool(pool).borrow(msg.value, repayAmount, _expectBorrow, msg.sender);
+		IONXPool(pool).borrow(msg.value, repayAmount, _expectBorrow, msg.sender);
 		if (_expectBorrow > 0) _innerTransfer(lendToken, msg.sender, _expectBorrow);
 		_updateProdutivity();
 	}
@@ -172,7 +180,7 @@ contract AAAAPlatform is Configable {
 			TransferHelper.safeTransferFrom(lendToken, msg.sender, pool, repayAmount);
 		}
 
-		IAAAAPool(pool).repay(_amountCollateral, msg.sender);
+		IONXPool(pool).repay(_amountCollateral, msg.sender);
 		_innerTransfer(collateralToken, msg.sender, _amountCollateral);
 		_updateProdutivity();
 	}
@@ -187,7 +195,7 @@ contract AAAAPlatform is Configable {
 			TransferHelper.safeTransfer(lendToken, pool, repayAmount);
 		}
 
-		IAAAAPool(pool).repay(_amountCollateral, msg.sender);
+		IONXPool(pool).repay(_amountCollateral, msg.sender);
 		_innerTransfer(collateralToken, msg.sender, _amountCollateral);
 		if (msg.value > repayAmount) TransferHelper.safeTransferETH(msg.sender, msg.value.sub(repayAmount));
 		_updateProdutivity();
@@ -195,13 +203,13 @@ contract AAAAPlatform is Configable {
 
 	function liquidation(address _user) external lock poolExist {
 		require(IConfig(config).getValue(ConfigNames.LIQUIDATION_ENABLE) == 1, "NOT ENABLE NOW");
-		IAAAAPool(pool).liquidation(_user, msg.sender);
+		IONXPool(pool).liquidation(_user, msg.sender);
 		_updateProdutivity();
 	}
 
 	function reinvest() external lock {
 		require(IConfig(config).getValue(ConfigNames.REINVEST_ENABLE) == 1, "NOT ENABLE NOW");
-		IAAAAPool(pool).reinvest(msg.sender);
+		IONXPool(pool).reinvest(msg.sender);
 		_updateProdutivity();
 	}
 
@@ -220,25 +228,25 @@ contract AAAAPlatform is Configable {
 
 	function _updateProdutivity() internal {
 		uint256 power = IConfig(config).getPoolValue(ConfigNames.POOL_MINT_POWER);
-		uint256 amount = IAAAAPool(pool).getTotalAmount().mul(power).div(10000);
-		(uint256 old, ) = IAAAAMint(IConfig(config).mint()).getProductivity(pool);
+		uint256 amount = IONXPool(pool).getTotalAmount().mul(power).div(10000);
+		(uint256 old, ) = IONXMint(IConfig(config).mint()).getProductivity(pool);
 		if (old > 0) {
-			IAAAAMint(IConfig(config).mint()).decreaseProductivity(pool, old);
+			IONXMint(IConfig(config).mint()).decreaseProductivity(pool, old);
 		}
 
-		address token = IAAAAPool(pool).supplyToken();
+		address token = IONXPool(pool).supplyToken();
 		uint256 baseAmount = IConfig(config).convertTokenAmount(token, IConfig(config).base(), amount);
 		if (baseAmount > 0) {
-			IAAAAMint(IConfig(config).mint()).increaseProductivity(pool, baseAmount);
+			IONXMint(IConfig(config).mint()).increaseProductivity(pool, baseAmount);
 		}
 	}
 
 	function getRepayAmount(uint256 amountCollateral, address from) public view returns (uint256 repayAmount) {
 		(, uint256 borrowAmountCollateral, uint256 interestSettled, uint256 amountBorrow, uint256 borrowInterests) =
-			IAAAAPool(pool).borrows(from);
+			IONXPool(pool).borrows(from);
 		uint256 _interestPerBorrow =
-			IAAAAPool(pool).interestPerBorrow().add(
-				IAAAAPool(pool).getInterests().mul(block.number - IAAAAPool(pool).lastInterestUpdate())
+			IONXPool(pool).interestPerBorrow().add(
+				IONXPool(pool).getInterests().mul(block.number - IONXPool(pool).lastInterestUpdate())
 			);
 		uint256 _totalInterest =
 			borrowInterests.add(_interestPerBorrow.mul(amountBorrow).div(1e18).sub(interestSettled));
@@ -257,23 +265,23 @@ contract AAAAPlatform is Configable {
 
 	function getLiquidationAmount(address from) public view returns (uint256 liquidationAmount) {
 		(uint256 amountSupply, , uint256 liquidationSettled, , uint256 supplyLiquidation) =
-			IAAAAPool(pool).supplys(from);
+			IONXPool(pool).supplys(from);
 		liquidationAmount = supplyLiquidation.add(
-			IAAAAPool(pool).liquidationPerSupply().mul(amountSupply).div(1e18).sub(liquidationSettled)
+			IONXPool(pool).liquidationPerSupply().mul(amountSupply).div(1e18).sub(liquidationSettled)
 		);
 	}
 
 	function getInterestAmount(address from) public view returns (uint256 interestAmount) {
-		uint256 totalBorrow = IAAAAPool(pool).totalBorrow();
-		uint256 totalSupply = totalBorrow + IAAAAPool(pool).remainSupply();
-		(uint256 amountSupply, uint256 interestSettled, , uint256 interests, ) = IAAAAPool(pool).supplys(from);
+		uint256 totalBorrow = IONXPool(pool).totalBorrow();
+		uint256 totalSupply = totalBorrow + IONXPool(pool).remainSupply();
+		(uint256 amountSupply, uint256 interestSettled, , uint256 interests, ) = IONXPool(pool).supplys(from);
 		uint256 _interestPerSupply =
-			IAAAAPool(pool).interestPerSupply().add(
+			IONXPool(pool).interestPerSupply().add(
 				totalSupply == 0
 					? 0
-					: IAAAAPool(pool)
+					: IONXPool(pool)
 						.getInterests()
-						.mul(block.number - IAAAAPool(pool).lastInterestUpdate())
+						.mul(block.number - IONXPool(pool).lastInterestUpdate())
 						.mul(totalBorrow)
 						.div(totalSupply)
 			);
@@ -294,12 +302,12 @@ contract AAAAPlatform is Configable {
 		uint256 platformShare =
 			_totalInterest.mul(IConfig(config).getValue(ConfigNames.INTEREST_PLATFORM_SHARE)).div(1e18);
 		interestAmount = _totalInterest.sub(platformShare);
-		uint256 totalLiquidation = IAAAAPool(pool).totalLiquidation();
+		uint256 totalLiquidation = IONXPool(pool).totalLiquidation();
 		uint256 withdrawLiquidationSupplyAmount =
 			totalLiquidation == 0
 				? 0
-				: liquidationAmount.mul(IAAAAPool(pool).totalLiquidationSupplyAmount()).div(totalLiquidation);
-		(uint256 amountSupply, , , , ) = IAAAAPool(pool).supplys(from);
+				: liquidationAmount.mul(IONXPool(pool).totalLiquidationSupplyAmount()).div(totalLiquidation);
+		(uint256 amountSupply, , , , ) = IONXPool(pool).supplys(from);
 		if (withdrawLiquidationSupplyAmount > amountSupply.add(interestAmount)) withdrawAmount = 0;
 		else withdrawAmount = amountSupply.add(interestAmount).sub(withdrawLiquidationSupplyAmount);
 	}

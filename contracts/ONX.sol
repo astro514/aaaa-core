@@ -6,13 +6,13 @@ import "./modules/Configable.sol";
 import "./modules/ConfigNames.sol";
 import "./modules/BaseMintField.sol";
 
-interface IAAAAMint {
+interface IONXMint {
 	function take() external view returns (uint256);
 
 	function mint() external returns (uint256);
 }
 
-contract AAAAPool is Configable, BaseMintField {
+contract ONXPool is Configable, BaseMintField {
 	using SafeMath for uint256;
 
 	address public supplyToken;
@@ -111,9 +111,9 @@ contract AAAAPool is Configable, BaseMintField {
 	}
 
 	function deposit(uint256 amountDeposit, address from) public onlyPlatform {
-		require(amountDeposit > 0, "AAAA: INVALID AMOUNT");
+		require(amountDeposit > 0, "ONX: INVALID AMOUNT");
 		uint256 amountIn = IERC20(supplyToken).balanceOf(address(this)).sub(remainSupply);
-		require(amountIn >= amountDeposit, "AAAA: INVALID AMOUNT");
+		require(amountIn >= amountDeposit, "ONX: INVALID AMOUNT");
 
 		updateInterests();
 
@@ -175,7 +175,7 @@ contract AAAAPool is Configable, BaseMintField {
 	}
 
 	function distributePlatformShare(uint256 platformShare) internal {
-		require(platformShare <= remainSupply, "AAAA: NOT ENOUGH PLATFORM SHARE");
+		require(platformShare <= remainSupply, "ONX: NOT ENOUGH PLATFORM SHARE");
 		if (platformShare > 0) {
 			uint256 buybackShare = IConfig(config).getValue(ConfigNames.INTEREST_BUYBACK_SHARE);
 			uint256 buybackAmount = platformShare.mul(buybackShare).div(1e18);
@@ -192,8 +192,8 @@ contract AAAAPool is Configable, BaseMintField {
 		onlyPlatform
 		returns (uint256 withdrawSupplyAmount, uint256 withdrawLiquidation)
 	{
-		require(amountWithdraw > 0, "AAAA: INVALID AMOUNT");
-		require(amountWithdraw <= supplys[from].amountSupply, "AAAA: NOT ENOUGH BALANCE");
+		require(amountWithdraw > 0, "ONX: INVALID AMOUNT");
+		require(amountWithdraw <= supplys[from].amountSupply, "ONX: NOT ENOUGH BALANCE");
 
 		updateInterests();
 
@@ -220,8 +220,8 @@ contract AAAAPool is Configable, BaseMintField {
 		if (withdrawLiquidationSupplyAmount < amountWithdraw.add(userShare))
 			withdrawSupplyAmount = amountWithdraw.add(userShare).sub(withdrawLiquidationSupplyAmount);
 
-		require(withdrawSupplyAmount <= remainSupply, "AAAA: NOT ENOUGH POOL BALANCE");
-		require(withdrawLiquidation <= totalLiquidation, "AAAA: NOT ENOUGH LIQUIDATION");
+		require(withdrawSupplyAmount <= remainSupply, "ONX: NOT ENOUGH POOL BALANCE");
+		require(withdrawLiquidation <= totalLiquidation, "ONX: NOT ENOUGH LIQUIDATION");
 
 		remainSupply = remainSupply.sub(withdrawSupplyAmount);
 		totalLiquidation = totalLiquidation.sub(withdrawLiquidation);
@@ -262,7 +262,7 @@ contract AAAAPool is Configable, BaseMintField {
 	) public onlyPlatform {
 		uint256 amountIn = IERC20(collateralToken).balanceOf(address(this)).sub(totalPledge);
 
-		require(amountIn == amountCollateral, "AAAA: INVALID AMOUNT");
+		require(amountIn == amountCollateral, "ONX: INVALID AMOUNT");
 
 		// if(amountCollateral > 0) TransferHelper.safeTransferFrom(collateralToken, from, address(this), amountCollateral);
 
@@ -279,8 +279,8 @@ contract AAAAPool is Configable, BaseMintField {
 		uint256 maximumBorrow = maxAmount.mul(pledgeRate).div(1e18);
 		// uint repayAmount = getRepayAmount(borrows[from].amountCollateral, from);
 
-		require(repayAmount + expectBorrow <= maximumBorrow, "AAAA: EXCEED MAX ALLOWED");
-		require(expectBorrow <= remainSupply, "AAAA: INVALID BORROW");
+		require(repayAmount + expectBorrow <= maximumBorrow, "ONX: EXCEED MAX ALLOWED");
+		require(expectBorrow <= remainSupply, "ONX: INVALID BORROW");
 
 		totalBorrow = totalBorrow.add(expectBorrow);
 		totalPledge = totalPledge.add(amountCollateral);
@@ -313,8 +313,8 @@ contract AAAAPool is Configable, BaseMintField {
 		onlyPlatform
 		returns (uint256 repayAmount, uint256 repayInterest)
 	{
-		require(amountCollateral <= borrows[from].amountCollateral, "AAAA: NOT ENOUGH COLLATERAL");
-		require(amountCollateral > 0, "AAAA: INVALID AMOUNT");
+		require(amountCollateral <= borrows[from].amountCollateral, "ONX: NOT ENOUGH COLLATERAL");
+		require(amountCollateral > 0, "ONX: INVALID AMOUNT");
 
 		uint256 amountIn = IERC20(supplyToken).balanceOf(address(this)).sub(remainSupply);
 
@@ -340,7 +340,7 @@ contract AAAAPool is Configable, BaseMintField {
 		remainSupply = remainSupply.add(repayAmount.add(repayInterest));
 
 		TransferHelper.safeTransfer(collateralToken, msg.sender, amountCollateral);
-		require(amountIn >= repayAmount.add(repayInterest), "AAAA: INVALID AMOUNT");
+		require(amountIn >= repayAmount.add(repayInterest), "ONX: INVALID AMOUNT");
 		// TransferHelper.safeTransferFrom(supplyToken, from, address(this), repayAmount.add(repayInterest));
 
 		_mintToPool();
@@ -352,7 +352,7 @@ contract AAAAPool is Configable, BaseMintField {
 	}
 
 	function liquidation(address _user, address from) public onlyPlatform returns (uint256 borrowAmount) {
-		require(supplys[from].amountSupply > 0, "AAAA: ONLY SUPPLIER");
+		require(supplys[from].amountSupply > 0, "ONX: ONLY SUPPLIER");
 
 		updateInterests();
 
@@ -369,7 +369,7 @@ contract AAAAPool is Configable, BaseMintField {
 
 		uint256 expectedRepay = borrows[_user].amountBorrow.add(borrows[_user].interests);
 
-		require(expectedRepay >= collateralValue.mul(liquidationRate).div(1e18), "AAAA: NOT LIQUIDABLE");
+		require(expectedRepay >= collateralValue.mul(liquidationRate).div(1e18), "ONX: NOT LIQUIDABLE");
 
 		updateLiquidation(borrows[_user].amountCollateral);
 
@@ -405,8 +405,8 @@ contract AAAAPool is Configable, BaseMintField {
 	}
 
 	function _mintToPool() internal {
-		if (IAAAAMint(IConfig(config).mint()).take() > 0) {
-			IAAAAMint(IConfig(config).mint()).mint();
+		if (IONXMint(IConfig(config).mint()).take() > 0) {
+			IONXMint(IConfig(config).mint()).mint();
 		}
 	}
 
@@ -417,7 +417,7 @@ contract AAAAPool is Configable, BaseMintField {
 	}
 
 	function _currentReward() internal view override returns (uint256) {
-		uint256 remain = IAAAAMint(IConfig(config).mint()).take();
+		uint256 remain = IONXMint(IConfig(config).mint()).take();
 		return remain.add(mintedShare).add(IERC20(IConfig(config).token()).balanceOf(address(this))).sub(totalShare);
 	}
 }

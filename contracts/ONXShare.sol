@@ -6,7 +6,7 @@ import "./modules/Configable.sol";
 import "./modules/BaseShareField.sol";
 import "./modules/ConfigNames.sol";
 
-contract AAAAShare is Configable, BaseShareField {
+contract ONXShare is Configable, BaseShareField {
 	mapping(address => uint256) public locks;
 	event ProductivityIncreased(address indexed user, uint256 value);
 	event ProductivityDecreased(address indexed user, uint256 value);

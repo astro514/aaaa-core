@@ -9,11 +9,11 @@ interface IERC20 {
 	function decimals() external view returns (uint8);
 }
 
-interface IAAAAPool {
+interface IONXPool {
 	function collateralToken() external view returns (address);
 }
 
-contract AAAAConfig {
+contract ONXConfig {
 	using SafeMath for uint256;
 	using SafeMath for uint8;
 	address public owner;
@@ -66,7 +66,7 @@ contract AAAAConfig {
 		address _base,
 		address _WETH
 	) external {
-		require(msg.sender == owner || msg.sender == developer, "AAAA: Config FORBIDDEN");
+		require(msg.sender == owner || msg.sender == developer, "ONX: Config FORBIDDEN");
 		mint = _mint;
 		platform = _platform;
 		token = _token;
@@ -77,38 +77,37 @@ contract AAAAConfig {
 	}
 
 	function changeDeveloper(address _developer) external {
-		require(msg.sender == owner || msg.sender == developer, "AAAA: Config FORBIDDEN");
+		require(msg.sender == owner || msg.sender == developer, "ONX: Config FORBIDDEN");
 		developer = _developer;
 	}
 
 	function setWallets(bytes32[] calldata _names, address[] calldata _wallets) external {
-		require(msg.sender == owner || msg.sender == developer, "AAAA: ONLY DEVELOPER");
-		require(_names.length == _wallets.length, "AAAA: WALLETS LENGTH MISMATCH");
+		require(msg.sender == owner || msg.sender == developer, "ONX: ONLY DEVELOPER");
+		require(_names.length == _wallets.length, "ONX: WALLETS LENGTH MISMATCH");
 		for (uint256 i = 0; i < _names.length; i++) {
 			wallets[_names[i]] = _wallets[i];
 		}
 	}
 
 	function initParameter() external {
-		require(msg.sender == owner || msg.sender == developer, "AAAA: Config FORBIDDEN");
-		_setParams(ConfigNames.PROPOSAL_VOTE_DURATION, 1 * DAY, 7 * DAY, 1 * DAY, 1 * DAY);
-		_setParams(ConfigNames.PROPOSAL_EXECUTE_DURATION, 1 * HOUR, 48 * HOUR, 1 * HOUR, 1 * HOUR);
-		_setParams(ConfigNames.PROPOSAL_CREATE_COST, 0, 10000 * 1e18, 100 * 1e18, 0);
+		require(msg.sender == owner || msg.sender == developer, "ONX: Config FORBIDDEN");
 		_setParams(ConfigNames.STAKE_LOCK_TIME, 0, 7 * DAY, 1 * DAY, 0);
 		_setParams(ConfigNames.MINT_AMOUNT_PER_BLOCK, 0, 10000 * 1e18, 1e17, 1e17);
 		_setParams(ConfigNames.INTEREST_PLATFORM_SHARE, 0, 1e18, 1e17, 1e17);
 		_setParams(ConfigNames.INTEREST_BUYBACK_SHARE, 10000, 10000, 0, 10000);
 		_setParams(ConfigNames.CHANGE_PRICE_DURATION, 0, 500, 100, 0);
 		_setParams(ConfigNames.CHANGE_PRICE_PERCENT, 1, 100, 1, 20);
-		_setParams(ConfigNames.AAAA_USER_MINT, 0, 0, 0, 3000);
-		_setParams(ConfigNames.AAAA_TEAM_MINT, 0, 0, 0, 7142);
-		_setParams(ConfigNames.AAAA_REWAED_MINT, 0, 0, 0, 5000);
+		_setParams(ConfigNames.ONX_USER_MINT, 0, 0, 0, 3000);
+		_setParams(ConfigNames.ONX_TEAM_MINT, 0, 0, 0, 7142);
+		_setParams(ConfigNames.ONX_REWAED_MINT, 0, 0, 0, 5000);
 		_setParams(ConfigNames.DEPOSIT_ENABLE, 0, 0, 0, 1);
 		_setParams(ConfigNames.WITHDRAW_ENABLE, 0, 0, 0, 1);
 		_setParams(ConfigNames.BORROW_ENABLE, 0, 0, 0, 1);
 		_setParams(ConfigNames.REPAY_ENABLE, 0, 0, 0, 1);
 		_setParams(ConfigNames.LIQUIDATION_ENABLE, 0, 0, 0, 1);
 		_setParams(ConfigNames.REINVEST_ENABLE, 0, 0, 0, 1);
+		_setParams(ConfigNames.POOL_REWARD_RATE, 0, 1e18, 1e17, 5e16);
+		_setParams(ConfigNames.POOL_ARBITRARY_RATE, 0, 1e18, 1e17, 9e16);
 		_setPoolParams(ConfigNames.POOL_BASE_INTERESTS, 0, 1e18, 1e16, 2e17);
 		_setPoolParams(ConfigNames.POOL_MARKET_FRENZY, 0, 1e18, 1e16, 2e17);
 		_setPoolParams(ConfigNames.POOL_PLEDGE_RATE, 0, 1e18, 1e16, 6e17);
@@ -152,9 +151,9 @@ contract AAAAConfig {
 	function setTokenPrice(address[] calldata _tokens, uint256[] calldata _prices) external {
 		uint256 duration = params[ConfigNames.CHANGE_PRICE_DURATION].value;
 		uint256 maxPercent = params[ConfigNames.CHANGE_PRICE_PERCENT].value;
-		require(block.number >= lastPriceBlock.add(duration), "AAAA: Price Duration");
-		require(msg.sender == wallets[bytes32("price")], "AAAA: Config FORBIDDEN");
-		require(_tokens.length == _prices.length, "AAAA: PRICES LENGTH MISMATCH");
+		require(block.number >= lastPriceBlock.add(duration), "ONX: Price Duration");
+		require(msg.sender == wallets[bytes32("price")], "ONX: Config FORBIDDEN");
+		require(_tokens.length == _prices.length, "ONX: PRICES LENGTH MISMATCH");
 		for (uint256 i = 0; i < _tokens.length; i++) {
 			if (prices[_tokens[i]] == 0) {
 				_setPrice(_tokens[i], _prices[i]);
@@ -176,7 +175,7 @@ contract AAAAConfig {
 	function setValue(bytes32 _key, uint256 _value) external {
 		require(
 			msg.sender == owner || msg.sender == governor || msg.sender == platform || msg.sender == developer,
-			"AAAA: ONLY DEVELOPER"
+			"ONX: ONLY DEVELOPER"
 		);
 		params[_key].value = _value;
 		emit ParameterChange(_key, _value);
@@ -185,7 +184,7 @@ contract AAAAConfig {
 	function setPoolValue(bytes32 _key, uint256 _value) external {
 		require(
 			msg.sender == owner || msg.sender == governor || msg.sender == platform || msg.sender == developer,
-			"AAAA: FORBIDDEN"
+			"ONX: FORBIDDEN"
 		);
 		_setPoolValue(_key, _value);
 	}
@@ -207,7 +206,7 @@ contract AAAAConfig {
 	) external {
 		require(
 			msg.sender == owner || msg.sender == governor || msg.sender == platform || msg.sender == developer,
-			"AAAA: FORBIDDEN"
+			"ONX: FORBIDDEN"
 		);
 		_setParams(_key, _min, _max, _span, _value);
 	}
@@ -221,7 +220,7 @@ contract AAAAConfig {
 	) external {
 		require(
 			msg.sender == owner || msg.sender == governor || msg.sender == platform || msg.sender == developer,
-			"AAAA: FORBIDDEN"
+			"ONX: FORBIDDEN"
 		);
 		_setPoolParams(_key, _min, _max, _span, _value);
 	}

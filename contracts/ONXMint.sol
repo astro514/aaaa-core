@@ -5,7 +5,7 @@ import "./libraries/TransferHelper.sol";
 import "./modules/Configable.sol";
 import "./modules/ConfigNames.sol";
 
-contract AAAAMint is Configable {
+contract ONXMint is Configable {
 	using SafeMath for uint256;
 	uint256 public mintCumulation;
 	uint256 public amountPerBlock;
@@ -129,7 +129,7 @@ contract AAAAMint is Configable {
 		}
 		uint256 amount =
 			userInfo.amount.mul(_accAmountPerShare).div(1e12).sub(userInfo.rewardDebt).add(userInfo.rewardEarn);
-		return amount.mul(IConfig(config).getValue(ConfigNames.AAAA_USER_MINT)).div(10000);
+		return amount.mul(IConfig(config).getValue(ConfigNames.ONX_USER_MINT)).div(10000);
 	}
 
 	function take() external view virtual returns (uint256) {
@@ -166,15 +166,15 @@ contract AAAAMint is Configable {
 	}
 
 	function _mintDistribution(address user, uint256 amount) internal {
-		uint256 userAmount = amount.mul(IConfig(config).getValue(ConfigNames.AAAA_USER_MINT)).div(10000);
+		uint256 userAmount = amount.mul(IConfig(config).getValue(ConfigNames.ONX_USER_MINT)).div(10000);
 		uint256 remainAmount = amount.sub(userAmount);
-		uint256 teamAmount = remainAmount.mul(IConfig(config).getValue(ConfigNames.AAAA_TEAM_MINT)).div(10000);
+		uint256 teamAmount = remainAmount.mul(IConfig(config).getValue(ConfigNames.ONX_TEAM_MINT)).div(10000);
 		if (teamAmount > 0) {
 			TransferHelper.safeTransfer(IConfig(config).token(), IConfig(config).wallets(ConfigNames.TEAM), teamAmount);
 		}
 
 		remainAmount = remainAmount.sub(teamAmount);
-		uint256 rewardAmount = remainAmount.mul(IConfig(config).getValue(ConfigNames.AAAA_REWAED_MINT)).div(10000);
+		uint256 rewardAmount = remainAmount.mul(IConfig(config).getValue(ConfigNames.ONX_REWAED_MINT)).div(10000);
 		if (rewardAmount > 0) {
 			TransferHelper.safeTransfer(
 				IConfig(config).token(),

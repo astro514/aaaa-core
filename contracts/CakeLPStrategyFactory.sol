@@ -17,7 +17,7 @@ interface ICakeMasterChef {
 	function cake() external view returns (address);
 }
 
-interface IAAAAPool {
+interface IONXPool {
 	function collateralToken() external view returns (address);
 }
 
@@ -44,7 +44,7 @@ contract CakeLPStrategyFactory is Configable {
 		address _poolAddress,
 		uint256 _lpPoolpid
 	) external onlyDeveloper returns (address _strategy) {
-		require(IAAAAPool(_poolAddress).collateralToken() == _collateralToken, "Not found collateralToken in Pool");
+		require(IONXPool(_poolAddress).collateralToken() == _collateralToken, "Not found collateralToken in Pool");
 		(address cToken, , , ) = IMasterChef(masterchef).poolInfo(_lpPoolpid);
 		require(cToken == _collateralToken, "Not found collateralToken in Masterchef");
 		bytes memory bytecode = type(CakeLPStrategy).creationCode;

@@ -3,10 +3,10 @@ pragma solidity >=0.5.16;
 import "./libraries/SafeMath.sol";
 import "./modules/Configable.sol";
 
-contract AAAAToken is Configable {
+contract ONXToken is Configable {
 	using SafeMath for uint256; // implementation of ERC20 interfaces.
-	string public name = "AAAA Token";
-	string public symbol = "AAAA";
+	string public name = "ONX Token";
+	string public symbol = "ONX";
 	uint8 public decimals = 18;
 	uint256 public totalSupply = 10240000 * (1e18);
 	mapping(address => uint256) public balanceOf;
@@ -23,7 +23,7 @@ contract AAAAToken is Configable {
 		address to,
 		uint256 value
 	) internal {
-		require(balanceOf[from] >= value, "AAAA: INSUFFICIENT_BALANCE");
+		require(balanceOf[from] >= value, "ONX: INSUFFICIENT_BALANCE");
 		balanceOf[from] = balanceOf[from].sub(value);
 		balanceOf[to] = balanceOf[to].add(value);
 		if (to == address(0)) {
@@ -49,7 +49,7 @@ contract AAAAToken is Configable {
 		address to,
 		uint256 value
 	) external returns (bool) {
-		require(allowance[from][msg.sender] >= value, "AAAA: INSUFFICIENT_ALLOWANCE");
+		require(allowance[from][msg.sender] >= value, "ONX: INSUFFICIENT_ALLOWANCE");
 		allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
 		_transfer(from, to, value);
 		return true;
